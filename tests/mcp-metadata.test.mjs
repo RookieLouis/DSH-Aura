@@ -25,13 +25,14 @@ test('each MCP row exposes distinct DSH display metadata', () => {
   assert.equal(descriptions.size, SERVER_NAMES.length)
 })
 
-test('named row entry preserves upstream MCP client exports', async () => {
+test('named row entry preserves upstream MCP schema and plugin metadata', async () => {
   const upstream = await import('@deepseek-ai/dsh-mcp-client')
   for (const serverName of SERVER_NAMES) {
     const entry = await import(MCP_ENTRY_NAMES[serverName])
-    for (const name of ['Config', 'apply', 'inject', 'name']) {
+    for (const name of ['Config', 'inject', 'name']) {
       assert.equal(entry[name], upstream[name], `${serverName} changed ${name}`)
     }
+    assert.equal(entry.apply.constructor.name, 'AsyncFunction', `${serverName} must await upstream activation`)
   }
 })
 

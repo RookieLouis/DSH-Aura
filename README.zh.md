@@ -12,7 +12,7 @@
 | **会话归组** | 将工作目录含有 `.uproject` 的会话按项目归入工作区；把 `[router] …` 占位标题改回用户的实际提问；让另一个 DSH 宿主仍在持有的会话也能在当前宿主中读取，且只读、不写入 | Aura 的每段对话对应一个 DSH 会话；否则侧边栏会充满相似条目，标题尚未传到当前宿主时还会只显示目录名 |
 | **提示词约束** | 每个会话注入一次简短的 Unreal 工作区操作约定 | 引导智能体实际完成修改，而不只是说明修改方法 |
 
-插件仅在宿主端运行，只使用具名导出。**它自身不注册任何工具**，不开放端口，也不自行启动进程。Unreal 相关进程由 MCP 客户端根据插件呈现的配置启动。
+插件仅在宿主端运行，只使用具名导出。**它自身不注册任何工具**，也不开放端口。对于 Aura 的两个 stdio 组件，MCP 客户端会启动本包的兼容转发程序；真正的 MCP 会话开始时，该程序再启动 Aura 的 Python 服务器。
 
 插件页面会显示四个组件：`dsh-aura` 负责会话管理和工作区指导；**Aura Unreal Inspector** 读取项目资产和编辑器状态；**Aura Unreal Editor** 修改当前项目；**Unreal Engine MCP** 连接引擎的本地 HTTP 端点。三个 MCP 组件共用上游 MCP 客户端，但各有独立说明。
 
@@ -24,15 +24,15 @@
 - **DeepSeek Harness 0.1.7-rc.1 至 0.2.x 系列**，以及一个用于安装插件的 profile。已验证 0.2.0-rc.1 运行时。
 - 要让两个 Aura MCP 组件实际提供工具，需运行 **Aura 桌面应用**，并让 UnrealEditor 连接到目标项目。否则组件可以加载，但不会提供工具，详见「已知限制」。
 
-### DSH 0.2 适配（dsh-aura 0.1.3）
+### DSH 0.2 适配（dsh-aura 0.1.4）
 
 `@deepseek-ai/dsh-llm` 和 `@deepseek-ai/dsh-mcp-client` 的 peer 版本范围现已包含
 `0.2.0-rc.1`，无需授予版本豁免即可消除桌面插件管理器的 `incompatible-version` 状态。
 在隔离的 DSH 0.2.0-rc.1 profile 中，组合配置各有一条插件组件和三条 MCP 组件；
-宿主输出 `dsh-aura armed`，首次检查成功。MCP 桥接测试调用一次工具并检查文本与图片响应。
-清除 `DSH_AURA_INSTALL_DIR` 环境变量后运行 `npm test`，结果为 203 项通过、1 项跳过。
-这些检查未调用真实 Unreal 工具；实际工具验证
-仍需启动 Aura 和 UnrealEditor。
+宿主输出 `dsh-aura armed`，首次检查成功。MCP 响应测试调用一次工具并检查文本与图片投影。
+0.1.4 版还兼容客户端在 `initialize` 前发送的 `server/discover` 探测。清除
+`DSH_AURA_INSTALL_DIR` 环境变量后，离线测试通过。这些检查未调用真实 Unreal 工具；
+实际工具验证仍需启动 Aura 和 UnrealEditor。
 
 ## 安装
 
@@ -95,6 +95,10 @@ Aura 的两个 stdio 服务器在桌面应用的 Python 桥接未运行时无法
 
 引擎自身的组件（`mcp-unreal-engine`）不启动子进程，**不受此守卫约束**。
 
+### 旧版 stdio 协议兼容
+
+DSH 0.2 可能在 `initialize` 前发送 `server/discover`，Aura 的旧版 Python 服务器不会回应这项可选探测。守卫为 `unreal_inspector` 或 `unreal_editor` 选中 stdio 时，一个轻量的 Node 转发程序会直接返回 JSON-RPC“方法不存在”（`-32601`），无需启动 Python。收到首个正常 MCP 请求后，它才启动原来的 Python 服务器并转发会话。默认的 `aura-client/MCP` 和 Unreal 插件的 `Aura/MCP` 目录布局都适用，前提是命令为 Python。其他命令和引擎的 HTTP 组件保持原有行为；守卫拒绝 stdio 时也不会启动这个转发程序。
+
 ## 配置
 
 插件组件可接收以下可选配置：
@@ -148,9 +152,9 @@ npm test
 
 ```text
 tests/            离线测试：清单、组件渲染及求值、守卫、
-                  阻塞处理、会话归组、标题回填、投影
+                  旧版 stdio 转发、阻塞处理、会话归组、标题回填、投影
 scripts/          受控配置块生成器与路径解析辅助程序
-lib/mcp/          MCP 组件渲染与加载时表达式
+lib/mcp/          MCP 组件渲染、加载时表达式与旧版 stdio 转发程序
 lib/session/      归组、近期顺序、标题回填、投影重新折叠
 lib/prompt/       注入的约定及去重
 meta/             插件页面各组件专属的标题和说明

@@ -14,9 +14,9 @@ It does three things, all host-side:
 | **Session grouping** | files every session whose working directory contains a `.uproject` into one workspace row per project, rewrites `[router] …` titles back to the user's actual question, and makes a session another DSH host is still holding readable here — read-only, never written | Aura drives DSH one session per conversation; without this the sidebar fills with identical rows, and a row whose title never reaches this host renders as the bare directory name |
 | **Prompt constraints** | injects a short Unreal workspace contract once per session | the difference between "here is how you would do it" and the change actually being made |
 
-Host-only. Named exports only. **It registers no tools**, opens no ports, and spawns nothing
-of its own — the Unreal processes are started by the MCP client from the configuration this
-plugin renders.
+Host-only. Named exports only. **It registers no tools** and opens no ports. For Aura's two
+stdio rows, the MCP client starts this package's compatibility relay, which starts Aura's
+Python server when a real MCP session begins.
 
 The Plugins page shows four components: `dsh-aura` manages sessions and workspace guidance;
 **Aura Unreal Inspector** reads project assets and editor state; **Aura Unreal Editor**
@@ -34,15 +34,16 @@ endpoint. Each MCP component has its own description while sharing the upstream 
   UnrealEditor connected to the project you care about. Without it the rows load but report
   no tools — see *Known limits*.
 
-### DSH 0.2 compatibility (dsh-aura 0.1.3)
+### DSH 0.2 compatibility (dsh-aura 0.1.4)
 
 The `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-mcp-client` peer ranges now include
 `0.2.0-rc.1`. This clears the desktop plugin manager's `incompatible-version` status
 without granting a version exemption. Against a clean DSH 0.2.0-rc.1 profile, the bundle
 composed exactly one plugin row and three MCP rows, and the host logged `dsh-aura armed`
-and a successful initial pass. The MCP bridge test calls a tool and checks its text and
-image response projection. `npm test` passed with `DSH_AURA_INSTALL_DIR` unset
-(203 passed, one skipped). These checks do not exercise live Unreal tools; that requires
+and a successful initial pass. The MCP response test calls a tool and checks its text and
+image projection. Version 0.1.4 also handles the client's pre-initialize `server/discover`
+probe for Aura's legacy Python servers. The offline suite passes with
+`DSH_AURA_INSTALL_DIR` unset. These checks do not exercise live Unreal tools; that requires
 Aura and UnrealEditor to be running.
 
 ## Install
@@ -132,6 +133,17 @@ endpoint, never the stdio command.
 | `DSH_AURA_ALLOW_ANY_COMMAND=1` | allow custom commands from trusted local configuration (bypasses installation validation) |
 
 The engine's own row (`mcp-unreal-engine`) has no child process and is **not** guarded.
+
+### Legacy stdio protocol compatibility
+
+DSH 0.2 may send `server/discover` before `initialize`. Aura's legacy Python servers do not
+answer that optional probe. When the guard selects stdio for `unreal_inspector` or
+`unreal_editor`, a small Node relay replies with JSON-RPC “Method not found” (`-32601`)
+without starting Python. At the first ordinary MCP request, it starts the original Python
+server and forwards the session. This applies to the default `aura-client/MCP` layout and
+Unreal plugin `Aura/MCP` layout with a Python command. Other commands and the engine's HTTP
+row keep their existing behavior. If the bridge guard rejects stdio, this relay is not
+started.
 
 ## Configuration
 
@@ -224,9 +236,9 @@ harness install otherwise, so it works on a machine that has no DSH at all.
 
 ```
 tests/            offline suite: manifest, row rendering and evaluation, the guard,
-                  blocking surgery, session grouping, title backfill, projections
+                  legacy stdio relay, blocking surgery, session grouping, title backfill, projections
 scripts/          the managed-block generator and the resolution helpers
-lib/mcp/          row rendering + the load-time expressions
+lib/mcp/          row rendering, load-time expressions and legacy stdio relay
 lib/session/      grouping, recency, title backfill, projection re-fold
 lib/prompt/       the injected contract and its dedup
 meta/             row-specific titles and descriptions for the Plugins page
