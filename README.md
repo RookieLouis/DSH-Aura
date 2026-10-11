@@ -1,6 +1,6 @@
 # dsh-aura
 
-English | [中文](README.zh.md)
+English | [中文](README.zh.md) | [Changelog (中文)](CHANGELOG.md)
 
 A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that wires
 [Aura for Unreal](https://www.tryaura.dev/) into the harness, and keeps Aura's sessions

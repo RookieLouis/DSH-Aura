@@ -67,6 +67,7 @@
     "meta/**/*.json",
     "README.md",
     "README.zh.md",
+    "CHANGELOG.md",
     "!**/*.bak*"
   ]
 }

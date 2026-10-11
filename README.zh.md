@@ -1,6 +1,6 @@
 # dsh-aura
 
-[English](README.md) | 中文
+[English](README.md) | 中文 | [更新记录](CHANGELOG.md)
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：将 [Aura for Unreal](https://www.tryaura.dev/) 接入 Harness，并让 Aura 会话在 Harness 中保持清晰可读。
 
